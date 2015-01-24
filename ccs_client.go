@@ -103,6 +103,10 @@ func (this *CCSClient) authenticate() error {
 		return err
 	}
 
+	if xmlResponse.Name.Space != XML_STREAM_NAMESPACE || xmlResponse.Name.Local != XML_STREAM_LOCAL_NAME {
+		return fmt.Errorf("expected <stream> but got <%+v> in %+v", xmlResponse.Name.Local, xmlResponse.Name.Space)
+	}
+
 	f := new(streamFeatures)
 	if err = this.xmlStream.DecodeElement(f, nil); err != nil {
 		return errors.New("ERROR UNMARSHALL <features>: " + err.Error())
@@ -120,22 +124,18 @@ func (this *CCSClient) authenticate() error {
 		return err
 	}
 
-	var response interface{}
-	switch xmlResponse.Name.Space + " " + xmlResponse.Name.Local {
-	case "urn:ietf:params:xml:ns:xmpp-sasl success":
-		response = &saslSuccess{}
-		break
-	default:
-		log.Printf("Unknown Response. XML Response: %+v", xmlResponse)
-		break
+	if xmlResponse.Name.Space != XML_SASL_NAMESPACE || xmlResponse.Name.Local != XML_SASL_SUCCESS {
+		return fmt.Errorf("expected <success> but got <%+v> in %+v", xmlResponse.Name.Local, xmlResponse.Name.Space)
 	}
 
-	if response != nil {
-		if err = this.xmlStream.DecodeElement(response, &xmlResponse); err != nil {
-			return errors.New("ERROR UNMARSHALL <sasl success>: " + err.Error())
-		}
-		fmt.Printf("%+v", response)
+	response := &saslSuccess{}
+
+	if err = this.xmlStream.DecodeElement(response, &xmlResponse); err != nil {
+		return errors.New("ERROR UNMARSHALL <sasl success>: " + err.Error())
 	}
+
+	fmt.Printf("%+v", response)
+
 	return nil
 }
 
