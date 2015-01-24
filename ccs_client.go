@@ -2,11 +2,9 @@ package gcm
 
 import (
 	"crypto/tls"
-	"encoding/base64"
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net"
 )
@@ -15,22 +13,23 @@ const (
 	TCP = "tcp"
 )
 
-type Config struct {
-	Host string
-	Port string
-	//GCM API Key
-	Username string
-	//GCM Project Number
-	Password string
+type GCMClient struct {
+	CCSClient *CCSClient
 }
 
-func (this Config) FullAddress() string {
-	return this.Host + ":" + this.Port
-}
+func (this *GCMClient) NewClient(config Config) (client *CCSClient, err error) {
+	tlsConfig := &tls.Config{
+		ServerName: config.Host,
+	}
 
-func (this Config) GetEncodedKey() string {
-	hexString := "\x00" + this.Username + "@" + this.Host + "\x00" + this.Password
-	return base64.StdEncoding.EncodeToString([]byte(hexString))
+	client = &CCSClient{}
+
+	err = client.Init(tlsConfig, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return
 }
 
 type CCSClient struct {
@@ -58,6 +57,33 @@ func (this *CCSClient) Init(tlsConfig *tls.Config, config Config) (err error) {
 	err = this.authenticate()
 	if err != nil {
 		return
+	}
+
+	return
+}
+
+func (this *CCSClient) Send(message Message) (err error) {
+	jsonMessage, err := message.Json()
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(this.tlsConn, CCS_MESSAGE, message.MessageID, jsonMessage)
+	return
+}
+
+func (this *CCSClient) Recv() (err error) {
+	xmlResponse, err := getXMLResponse(this.xmlStream)
+	if err != nil {
+		log.Println("ERROR Receiving: %+v", err)
+	}
+	log.Println("Received", xmlResponse)
+	return
+}
+
+func (this *CCSClient) Close() (err error) {
+	if this.tlsConn != nil {
+		err = this.tlsConn.Close()
 	}
 	return
 }
@@ -137,43 +163,4 @@ func (this *CCSClient) authenticate() error {
 	fmt.Printf("%+v", response)
 
 	return nil
-}
-
-func getXMLResponse(xmlStream *xml.Decoder) (xml.StartElement, error) {
-	for {
-		token, err := xmlStream.Token()
-		if err != nil && err != io.EOF {
-			return xml.StartElement{}, err
-		}
-		switch tokenType := token.(type) {
-		case xml.StartElement:
-			return tokenType, nil
-		}
-	}
-}
-
-func (this *CCSClient) Close() (err error) {
-	if this.tlsConn != nil {
-		err = this.tlsConn.Close()
-	}
-	return
-}
-
-type GCMClient struct {
-	CCSClient *CCSClient
-}
-
-func (this *GCMClient) NewClient(config Config) (client *CCSClient, err error) {
-	tlsConfig := &tls.Config{
-		ServerName: config.Host,
-	}
-
-	client = &CCSClient{}
-
-	err = client.Init(tlsConfig, config)
-	if err != nil {
-		return nil, err
-	}
-
-	return
 }

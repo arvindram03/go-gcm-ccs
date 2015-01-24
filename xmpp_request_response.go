@@ -2,6 +2,7 @@ package gcm
 
 import (
 	"encoding/xml"
+	"io"
 )
 
 const (
@@ -30,4 +31,17 @@ type saslMechanisms struct {
 
 type saslSuccess struct {
 	XMLName xml.Name `xml:"urn:ietf:params:xml:ns:xmpp-sasl success"`
+}
+
+func getXMLResponse(xmlStream *xml.Decoder) (xml.StartElement, error) {
+	for {
+		token, err := xmlStream.Token()
+		if err != nil && err != io.EOF {
+			return xml.StartElement{}, err
+		}
+		switch tokenType := token.(type) {
+		case xml.StartElement:
+			return tokenType, nil
+		}
+	}
 }
