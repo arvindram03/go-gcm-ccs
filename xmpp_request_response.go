@@ -9,6 +9,8 @@ const (
 	START_STREAM = `<stream:stream to="gcm.googleapis.com" version="1.0" xmlns="jabber:client" 
         				xmlns:stream="http://etherx.jabber.org/streams">`
 	CLIENT_AUTH = `<auth mechanism="PLAIN" xmlns="urn:ietf:params:xml:ns:xmpp-sasl">%s</auth>`
+
+	IQ_BIND_REQUEST = `<iq type="set" id="%s"><bind xmlns="urn:ietf:params:xml:ns:xmpp-bind"></bind></iq>\n`
 )
 
 const (
@@ -31,6 +33,30 @@ type saslMechanisms struct {
 
 type saslSuccess struct {
 	XMLName xml.Name `xml:"urn:ietf:params:xml:ns:xmpp-sasl success"`
+}
+
+type clientIQ struct { // info/query
+	XMLName xml.Name `xml:"jabber:client iq"`
+	From    string   `xml:",attr"`
+	ID      string   `xml:",attr"`
+	To      string   `xml:",attr"`
+	Type    string   `xml:",attr"` // error, get, result, set
+	Error   clientError
+	Bind    bindBind
+}
+
+type clientError struct {
+	XMLName xml.Name `xml:"jabber:client error"`
+	Code    string   `xml:",attr"`
+	Type    string   `xml:",attr"`
+	Any     xml.Name
+	Text    string
+}
+
+type bindBind struct {
+	XMLName  xml.Name `xml:"urn:ietf:params:xml:ns:xmpp-bind bind"`
+	Resource string
+	Jid      string `xml:"jid"`
 }
 
 func getXMLResponse(xmlStream *xml.Decoder) (xml.StartElement, error) {

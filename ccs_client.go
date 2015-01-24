@@ -1,6 +1,7 @@
 package gcm
 
 import (
+	"code.google.com/p/go-uuid/uuid"
 	"crypto/tls"
 	"encoding/xml"
 	"errors"
@@ -37,6 +38,7 @@ type CCSClient struct {
 	tlsConfig *tls.Config
 	config    Config
 	xmlStream *xml.Decoder
+	jabberID  string
 }
 
 func (this *CCSClient) Init(tlsConfig *tls.Config, config Config) (err error) {
@@ -46,19 +48,19 @@ func (this *CCSClient) Init(tlsConfig *tls.Config, config Config) (err error) {
 	if err != nil {
 		return
 	}
-
+	//log.Println("Initated TLS")
 	err = this.tlsHandshake()
 	if err != nil {
 		return
 	}
-
+	//log.Println("Initated TLS Handshake")
 	this.initXMLStream()
-
+	//log.Println("Initated XML Stream")
 	err = this.authenticate()
 	if err != nil {
 		return
 	}
-
+	//log.Println("Authenticated")
 	return
 }
 
@@ -68,7 +70,11 @@ func (this *CCSClient) Send(message Message) (err error) {
 		return err
 	}
 
-	fmt.Fprintf(this.tlsConn, CCS_MESSAGE, message.MessageID, jsonMessage)
+	_, err = fmt.Fprintf(this.tlsConn, CCS_MESSAGE, message.MessageID, jsonMessage)
+	if err != nil {
+		log.Panicln("ERROR sending message: %+v", err)
+	}
+	log.Println("Message Sent: %s ", fmt.Sprintf(CCS_MESSAGE, message.MessageID, jsonMessage))
 	return
 }
 
@@ -77,7 +83,11 @@ func (this *CCSClient) Recv() (err error) {
 	if err != nil {
 		log.Println("ERROR Receiving: %+v", err)
 	}
-	log.Println("Received", xmlResponse)
+	ccsMessage := &ccsMessage{}
+	if err = this.xmlStream.DecodeElement(ccsMessage, &xmlResponse); err != nil {
+		return errors.New("ERROR UNMARSHALL <features>: " + err.Error())
+	}
+	log.Printf("Received Message: %s", ccsMessage.Body)
 	return
 }
 
@@ -160,7 +170,30 @@ func (this *CCSClient) authenticate() error {
 		return errors.New("ERROR UNMARSHALL <sasl success>: " + err.Error())
 	}
 
-	fmt.Printf("%+v", response)
+	fmt.Fprintf(this.tlsConn, START_STREAM)
+	xmlResponse, err = getXMLResponse(this.xmlStream)
+	if err != nil {
+		return err
+	}
+
+	f = new(streamFeatures)
+	if err = this.xmlStream.DecodeElement(f, nil); err != nil {
+		return errors.New("ERROR UNMARSHALL <features>: " + err.Error())
+	}
+
+	sessionID := uuid.New()
+
+	fmt.Fprintf(this.tlsConn, IQ_BIND_REQUEST, sessionID)
+
+	var iq clientIQ
+	if err = this.xmlStream.DecodeElement(&iq, nil); err != nil {
+		return errors.New("unmarshal <iq>: " + err.Error())
+	}
+	if &iq.Bind == nil {
+		return errors.New("<iq> result missing <bind>")
+	}
+
+	this.jabberID = iq.Bind.Jid
 
 	return nil
 }

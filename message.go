@@ -7,11 +7,7 @@ import (
 )
 
 const (
-	CCS_MESSAGE = `<message id="%s">
-  					<gcm xmlns="google:mobile:data">
-  						%s
-  					</gcm>
-				</message>`
+	CCS_MESSAGE = `<message id="%s"><gcm xmlns="google:mobile:data">%s</gcm></message>`
 )
 
 type ccsMessage struct {
@@ -21,12 +17,12 @@ type ccsMessage struct {
 }
 
 type Message struct {
-	To                       string `json:"to"`
-	MessageID                string `json:"message_id"`
-	Data                     string `json:"data"`
-	TTL                      string `json:"time_to_live"`
-	DelayWhileIdle           bool   `json:"delay_while_idle"`
-	DeliveryReceiptRequested bool   `json:"delivery_receipt_requested"`
+	To                       string      `json:"to"`
+	MessageID                string      `json:"message_id"`
+	Data                     interface{} `json:"data"`
+	TTL                      int64       `json:"time_to_live"`
+	DelayWhileIdle           bool        `json:"delay_while_idle"`
+	DeliveryReceiptRequested bool        `json:"delivery_receipt_requested"`
 }
 
 func (this Message) Json() (string, error) {
