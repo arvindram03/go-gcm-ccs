@@ -2,6 +2,7 @@ package gcm
 
 import (
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -25,6 +26,11 @@ type Config struct {
 
 func (this Config) FullAddress() string {
 	return this.Host + ":" + this.Port
+}
+
+func (this Config) GetEncodedKey() string {
+	hexString := "\x00" + this.Username + "@" + this.Host + "\x00" + this.Password
+	return base64.StdEncoding.EncodeToString([]byte(hexString))
 }
 
 type CCSClient struct {
@@ -104,7 +110,7 @@ func (this *CCSClient) authenticate() error {
 
 	for _, mechanism := range f.Mechanisms.Mechanism {
 		if mechanism == "PLAIN" {
-			fmt.Fprintf(this.tlsConn, CLIENT_AUTH)
+			fmt.Fprintf(this.tlsConn, CLIENT_AUTH, this.config.GetEncodedKey())
 			break
 		}
 	}
@@ -120,7 +126,7 @@ func (this *CCSClient) authenticate() error {
 		response = &saslSuccess{}
 		break
 	default:
-		log.Println("Unknown Response")
+		log.Printf("Unknown Response. XML Response: %+v", xmlResponse)
 		break
 	}
 
