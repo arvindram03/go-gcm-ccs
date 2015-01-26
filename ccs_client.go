@@ -3,6 +3,7 @@ package gcm
 import (
 	"code.google.com/p/go-uuid/uuid"
 	"crypto/tls"
+	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -64,31 +65,33 @@ func (this *CCSClient) Init(tlsConfig *tls.Config, config Config) (err error) {
 	return
 }
 
-func (this *CCSClient) Send(message Message) (err error) {
-	jsonMessage, err := message.Json()
-	if err != nil {
-		return err
-	}
-
-	_, err = fmt.Fprintf(this.tlsConn, CCS_MESSAGE, message.MessageID, jsonMessage)
+func (this *CCSClient) Send(messageID string, messageContent string) (err error) {
+	_, err = fmt.Fprintf(this.tlsConn, CCS_MESSAGE, messageID, messageContent)
 	if err != nil {
 		log.Panicln("ERROR sending message: %+v", err)
 	}
-	log.Println("Message Sent: %s ", fmt.Sprintf(CCS_MESSAGE, message.MessageID, jsonMessage))
+	log.Println("Message Sent: %s ", fmt.Sprintf(CCS_MESSAGE, messageID, messageContent))
 	return
 }
 
-func (this *CCSClient) Recv() (err error) {
+func (this *CCSClient) Recv() (*CCSMessageResponse, error) {
 	xmlResponse, err := getXMLResponse(this.xmlStream)
 	if err != nil {
 		log.Println("ERROR Receiving: %+v", err)
+		return nil, err
 	}
 	ccsMessage := &ccsMessage{}
 	if err = this.xmlStream.DecodeElement(ccsMessage, &xmlResponse); err != nil {
-		return errors.New("ERROR UNMARSHALL <features>: " + err.Error())
+		return nil, errors.New("ERROR UNMARSHALL <features>: " + err.Error())
 	}
-	log.Printf("Received Message: %s", ccsMessage.Body)
-	return
+
+	ccsMessageResponse := &CCSMessageResponse{}
+	err = json.Unmarshal([]byte(ccsMessage.Body), ccsMessageResponse)
+	if err != nil {
+		return nil, errors.New("ERROR UNMARSHALL CCS Response: " + err.Error())
+	}
+
+	return ccsMessageResponse, err
 }
 
 func (this *CCSClient) Close() (err error) {

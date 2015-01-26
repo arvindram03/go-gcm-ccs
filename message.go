@@ -1,19 +1,36 @@
 package gcm
 
 import (
-	"encoding/json"
 	"encoding/xml"
-	"log"
 )
 
 const (
 	CCS_MESSAGE = `<message id="%s"><gcm xmlns="google:mobile:data">%s</gcm></message>`
 )
 
+const (
+	ACK      = "ack"
+	NACK     = "nack"
+	CONTROL  = "control"
+	RECEIPT  = "receipt"
+	UPSTREAM = ""
+)
+
 type ccsMessage struct {
 	XMLName xml.Name `xml:"message"`
 	ID      string   `xml:"id,attr"`
 	Body    string   `xml:"google:mobile:data gcm"`
+}
+
+type CCSMessageResponse struct {
+	MessageType      string      `json:"message_type"`
+	ControlType      string      `json:"control_type"`
+	MessageID        string      `json:"message_id"`
+	From             string      `json:"from"`
+	Data             interface{} `json:"data"`
+	Category         string      `json:"category"`
+	Error            string      `json:"error"`
+	ErrorDescription string      `json:"error_description"`
 }
 
 type Message struct {
@@ -25,12 +42,8 @@ type Message struct {
 	DeliveryReceiptRequested bool        `json:"delivery_receipt_requested"`
 }
 
-func (this Message) Json() (string, error) {
-	bytes, err := json.Marshal(this)
-	if err != nil {
-		log.Printf("Marshal ERROR: %+v ", err)
-		return "", err
-	}
-
-	return string(bytes), err
+type ACKMessage struct {
+	To          string `json:"to"`
+	MessageID   string `json:"message_id"`
+	MessageType string `json:"message_type"`
 }
