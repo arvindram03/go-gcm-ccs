@@ -49,7 +49,7 @@ type ACKMessage struct {
 }
 
 type ReceiptMessage struct {
-	MessageStatus        string `json:“message_status"`
-	OriginalMessageID    string `json:“original_message_id”`
-	DeviceRegistrationID string `json:“device_registration_id”`
+	MessageStatus        string `json:"message_status"`
+	OriginalMessageID    string `json:"original_message_id"`
+	DeviceRegistrationID string `json:"device_registration_id"`
 }
