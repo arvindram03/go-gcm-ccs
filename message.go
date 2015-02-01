@@ -47,3 +47,9 @@ type ACKMessage struct {
 	MessageID   string `json:"message_id"`
 	MessageType string `json:"message_type"`
 }
+
+type ReceiptMessage struct {
+	MessageStatus        string `json:“message_status"`
+	OriginalMessageID    string `json:“original_message_id”`
+	DeviceRegistrationID string `json:“device_registration_id”`
+}

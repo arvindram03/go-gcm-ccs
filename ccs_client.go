@@ -70,14 +70,12 @@ func (this *CCSClient) Send(messageID string, messageContent string) (err error)
 	if err != nil {
 		log.Panicln("ERROR sending message: %+v", err)
 	}
-	log.Println("Message Sent: %s ", fmt.Sprintf(CCS_MESSAGE, messageID, messageContent))
 	return
 }
 
 func (this *CCSClient) Recv() (*CCSMessageResponse, error) {
 	xmlResponse, err := getXMLResponse(this.xmlStream)
 	if err != nil {
-		log.Println("ERROR Receiving: %+v", err)
 		return nil, err
 	}
 	ccsMessage := &ccsMessage{}
